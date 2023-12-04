@@ -2,10 +2,12 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import { _ } from 'meteor/underscore';
-import { Button, Row, Col, InputGroup, Form, Container, Spinner, Modal } from 'react-bootstrap';
+import { Button, Row, Col, InputGroup, Form, Spinner, Modal } from 'react-bootstrap';
 import { ChevronLeft, ChevronRight } from 'react-bootstrap-icons';
 import * as mapboxgl from 'mapbox-gl';
+import MapboxGeocoder from 'mapbox-gl-geocoder';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import swal from 'sweetalert';
@@ -13,7 +15,6 @@ import { Models } from '../../api/model/Model';
 import { Simulations } from '../../api/simulation/Simulation';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SimModelItem from '../components/SimModelItem';
-import PlaceForm from '../components/PlaceForm';
 import { Discussions } from '../../api/discussion/Discussion';
 import { Images } from '../../api/images/client/images';
 import '../../../client/style.css';
@@ -56,7 +57,6 @@ const AddSim = () => {
   const [searchField, setSearchField] = useState('');
 
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [placesSearch, setPlacesSearch] = useState(null);
   const map = useRef(null);
   const centerCoords = { lng: -156.67528434900575, lat: 20.879749734680864 };
   const zoom = 15.4;
@@ -325,6 +325,16 @@ const AddSim = () => {
       antialias: true,
     });
 
+    const geocoder = new MapboxGeocoder({
+      // Initialize the geocoder
+      accessToken: mapboxgl.accessToken, // Set the access token
+      mapboxgl: mapboxgl, // Set the mapbox-gl instance
+      marker: false, // Do not use the default marker style
+      placeholder: 'Navigate to Address...',
+    });
+
+    map.current.addControl(geocoder);
+
     map.current.on('load', () => {
       const mc = mapboxgl.MercatorCoordinate.fromLngLat([centerCoords.lng, centerCoords.lat], 0);
       const meterScale = mc.meterInMercatorCoordinateUnits();
@@ -382,17 +392,6 @@ const AddSim = () => {
     });
   });
 
-  const jumpToMap = (loc) => {
-    if (loc === null) return;
-
-    map.current.flyTo({
-      center: [loc.lng, loc.lat],
-      zoom: zoom,
-      bearing: bearing,
-      pitch: pitch,
-    });
-  };
-
   const Search = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {
       const filter = document.getElementById('model-search').value;
@@ -417,13 +416,6 @@ const AddSim = () => {
           <div id="map" />
         </Col>
         <Col lg={3} className="pt-3" id="edit-window" style={{ paddingRight: 20 }}>
-          <Row className="mb-3">
-            <h3>Navigate to Address:</h3>
-            <PlaceForm setPlacesSearch={setPlacesSearch} />
-            <Container>
-              <Button variant="primary" size="sm" onClick={() => jumpToMap(placesSearch)} className="theme-button" style={{ width: '3em' }}>Go</Button>
-            </Container>
-          </Row>
           <Row>
             <h3>Currently Selected Model:</h3>
             <p id="selected-model-name" style={{ color: '#f8744d' }}>None</p>

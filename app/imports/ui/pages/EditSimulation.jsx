@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Roles } from 'meteor/alanning:roles';
 import { _ } from 'meteor/underscore';
-import { Button, Col, Container, Form, Row, Spinner, Modal, InputGroup } from 'react-bootstrap';
+import { Button, Col, Form, Row, Spinner, Modal, InputGroup } from 'react-bootstrap';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import { useParams } from 'react-router';
@@ -9,11 +9,13 @@ import { ChevronLeft, ChevronRight, ExclamationTriangle } from 'react-bootstrap-
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as mapboxgl from 'mapbox-gl';
+import MapboxGeocoder from 'mapbox-gl-geocoder';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import swal from 'sweetalert';
 import { Simulations } from '../../api/simulation/Simulation';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SimModelItem from '../components/SimModelItem';
-import PlaceForm from '../components/PlaceForm';
 import { Models } from '../../api/model/Model';
 import { Images } from '../../api/images/client/images';
 
@@ -59,7 +61,6 @@ const EditSimulation = () => {
 
   const centerCoords = { lng: -156.67528434900575, lat: 20.879749734680864 };
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [placesSearch, setPlacesSearch] = useState(null);
   const map = useRef(null);
 
   let sceneTransform;
@@ -320,6 +321,16 @@ const EditSimulation = () => {
       antialias: true,
     });
 
+    const geocoder = new MapboxGeocoder({
+      // Initialize the geocoder
+      accessToken: mapboxgl.accessToken, // Set the access token
+      mapboxgl: mapboxgl, // Set the mapbox-gl instance
+      marker: false, // Do not use the default marker style
+      placeholder: 'Navigate to Address...',
+    });
+
+    map.current.addControl(geocoder);
+
     map.current.on('load', () => {
       const mc = mapboxgl.MercatorCoordinate.fromLngLat([centerCoords.lng, centerCoords.lat], 0);
       const meterScale = mc.meterInMercatorCoordinateUnits();
@@ -438,13 +449,6 @@ const EditSimulation = () => {
           <div id="map" />
         </Col>
         <Col lg={3} className="pt-3" id="edit-window" style={{ paddingRight: 20 }}>
-          <Row className="mb-3">
-            <h3>Navigate to Address:</h3>
-            <PlaceForm setPlacesSearch={setPlacesSearch} />
-            <Container>
-              <Button variant="primary" size="sm" onClick={() => jumpToMap(placesSearch)} className="theme-button" style={{ width: '3em' }}>Go</Button>
-            </Container>
-          </Row>
           <Row>
             <h3>Currently Selected Model:</h3>
             <p id="selected-model-name" style={{ color: '#f8744d' }}>None</p>
